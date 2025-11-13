@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Proktor Ujian</title>
+  <!-- Link to web app manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1976d2">
+  <style>
+    /* Simple, responsive, desktop-friendly layout */
+    :root{--blue:#1976d2;--bg:#f5f7fb}
+    body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:#111}
+    header{background:var(--blue);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+    header h1{margin:0;font-size:18px}
+    .container{max-width:980px;margin:28px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    label{display:block;margin-bottom:8px;font-weight:600}
+    input[type="url"]{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    button{background:var(--blue);color:#fff;border:0;padding:10px 14px;border-radius:6px;cursor:pointer}
+    button.secondary{background:#e0e0e0;color:#111}
+    iframe{width:100%;height:600px;border:1px solid #ddd;border-radius:6px;margin-top:16px}
+    footer{margin-top:16px;text-align:center;color:#666;font-size:13px}
+    .hint{font-size:13px;color:#444;margin-bottom:12px}
+    @media(min-width:900px){header h1{font-size:20px}}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/icons/icon-192.png" alt="icon" width="36" height="36" style="border-radius:6px">
+    <h1>Proktor Ujian</h1>
+  </header>
+
+  <main class="container">
+    <p class="hint">Masukkan URL CBT siswa lalu klik <strong>Buka</strong>. Anda dapat memilih untuk membuka di dalam aplikasi (iframe) atau di jendela baru.</p>
+
+    <label for="examUrl">URL Ujian</label>
+    <input id="examUrl" type="url" value="http://smabpi.cisewu.me/cbt/" placeholder="https://example.com/cbt/">
+
+    <div class="controls">
+      <button id="openBtn">Buka (di iframe)</button>
+      <button id="openNewBtn" class="secondary">Buka di Jendela Baru</button>
+      <button id="installBtn" class="secondary" style="display:none">Install PWA</button>
+    </div>
+
+    <div id="frameHolder" style="display:none">
+      <iframe id="examFrame" src="" title="Ujian"></iframe>
+    </div>
+
+    <div id="offlineNotice" style="display:none;margin-top:12px;color:#b00020;font-weight:600">Anda sedang offline. Silakan coba lagi.</div>
+
+    <footer>
+      <div id="buildInfo">Build: <span id="buildTime"></span></div>
+      <div style="margin-top:6px">Catatan: Pastikan koneksi HTTPS saat deploy agar PWA dapat diinstall.</div>
+    </footer>
+  </main>
+
+  <script>
+    // Show build timestamp (generated at file creation)
+    document.getElementById('buildTime').textContent = new Date().toLocaleString();
+
+    // Simple UI logic: open iframe or new window
+    const openBtn = document.getElementById('openBtn');
+    const openNewBtn = document.getElementById('openNewBtn');
+    const examUrlInput = document.getElementById('examUrl');
+    const frameHolder = document.getElementById('frameHolder');
+    const examFrame = document.getElementById('examFrame');
+    const offlineNotice = document.getElementById('offlineNotice');
+
+    function updateOnlineStatus(){
+      if(navigator.onLine){
+        offlineNotice.style.display = 'none';
+      } else {
+        offlineNotice.style.display = 'block';
+      }
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    openBtn.addEventListener('click', ()=>{
+      const url = examUrlInput.value || examUrlInput.placeholder;
+      // Use iframe if URL allows embedding, otherwise open in new window
+      frameHolder.style.display = 'block';
+      examFrame.src = url;
+    });
+
+    openNewBtn.addEventListener('click', ()=>{
+      const url = examUrlInput.value || examUrlInput.placeholder;
+      window.open(url, '_blank');
+    });
+
+    // --- PWA install prompt handling ---
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'inline-block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if(choiceResult.outcome === 'accepted'){
+        console.log('User accepted the A2HS prompt');
+      } else {
+        console.log('User dismissed the A2HS prompt');
+      }
+      deferredPrompt = null;
+      installBtn.style.display = 'none';
+    });
+
+    // --- Register service worker ---
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('SW registered', reg))
+        .catch(err => console.warn('SW register failed', err));
+    }
+
+  </script>
+</body>
+</html>
