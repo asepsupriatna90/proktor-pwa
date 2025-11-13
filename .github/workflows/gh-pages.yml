@@ -13,16 +13,25 @@ jobs:
       contents: read
 
     steps:
-      # Checkout repository (only needed to read files)
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Upload the repository root as the Pages artifact
+      # Optional: build PWA jika ada build step
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build PWA
+        run: npm run build
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: '.'
+          path: 'build/'  # folder hasil build
 
-      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
